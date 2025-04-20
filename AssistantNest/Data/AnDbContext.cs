@@ -26,8 +26,31 @@ public class AnDbContext : DbContext
         userBuilder.ToTable("Users");
         userBuilder.HasKey(a => a.Id);
         userBuilder.Property(nameof(AnUser.Id)).HasColumnType("uuid");
-        userBuilder.Property(nameof(AnUser.NameArray)).HasColumnType("char[]");
-        userBuilder.Property(nameof(AnUser.EncryptedPassphraseArray)).HasColumnType("char[]");
+        userBuilder.Property(nameof(AnUser.Name)).HasColumnType("varchar");
+        userBuilder.Property(nameof(AnUser.AcceptedCookiesAt)).HasColumnType("timestamp");
+        userBuilder.Property(nameof(AnUser.EncounteredAt)).HasColumnType("timestamp");
+        userBuilder.Property(nameof(AnUser.UpdatedAt)).HasColumnType("timestamp");
+        userBuilder.Property(nameof(AnUser.EncryptedPassphrase)).HasColumnType("varchar");
+        userBuilder.HasMany(u => u.Projects)
+            .WithOne(p => p.User)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        EntityTypeBuilder<AnProject> projectBuilder = modelBuilder.Entity<AnProject>();
+        projectBuilder.ToTable("Projects");
+        projectBuilder.HasKey(a => a.Id);
+        projectBuilder.Property(nameof(AnProject.Id)).HasColumnType("uuid");
+        projectBuilder.Property(nameof(AnProject.Name)).HasColumnType("varchar");
+        projectBuilder.Property(nameof(AnProject.OpenAiOrganizationId)).HasColumnType("varchar");
+        projectBuilder.Property(nameof(AnProject.Description)).HasColumnType("varchar");
+        projectBuilder.Property(nameof(AnProject.EncryptedApiKey)).HasColumnType("varchar");
+        projectBuilder.Property(nameof(AnProject.CreatedAt)).HasColumnType("timestamp");
+        projectBuilder.Property(nameof(AnProject.UpdatedAt)).HasColumnType("timestamp");
+        projectBuilder.HasOne(p => p.User)
+            .WithMany(u => u.Projects)
+            .HasForeignKey(p => p.User)
+            .OnDelete(DeleteBehavior.Cascade);
+
         return modelBuilder;
     }
 }

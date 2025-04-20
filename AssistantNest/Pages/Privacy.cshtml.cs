@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
-using Eggnine.SentientHorizon.Web.Pages;
 
 namespace AssistantNest.Pages;
 public class Privacy : PageModel
@@ -26,15 +25,11 @@ public class Privacy : PageModel
 
     public AnUser? AnUser {get;set;}
 
-    public async Task<AnUser?> GetUserFromCookieAsync(CancellationToken cancellationToken = default)
-    {
-        return await HttpContext.GetUserFromCookieAsync(_users, _logger, cancellationToken);
-    }
-
     public async Task<IActionResult> OnGetAsync(bool acceptedCookies = false, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Entering {ClassName}.{MethodName}", nameof(Privacy), nameof(OnGetAsync));
-        AnUser = await GetUserFromCookieAsync(cancellationToken);
+        Guid? userId = await HttpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
+        AnUser = userId is null ? null : await _users.GetAsync(u => u.Id.Equals(userId), cancellationToken);
         return Page();
     }
 }

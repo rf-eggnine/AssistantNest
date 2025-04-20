@@ -13,7 +13,9 @@ public interface IRepository<T>
     public Task<T?> GetAsync(Func<T, bool> query, CancellationToken cancellationToken = default);
     public Task<IEnumerable<T>> GetManyAsync(Func<T, bool> query, CancellationToken cancellationToken = default);
 
-    public Task<bool> AddAsync(T t, CancellationToken cancellationToken = default);
+    public Task<T?> AddAsync(T t, CancellationToken cancellationToken = default);
 
-    public Task<bool> UpdateAsync(Func<T, bool> query, Action<T> update, CancellationToken cancellationToken = default);
+    public Task<T?> UpdateAsync(Func<T, bool> query, Action<T> update, CancellationToken cancellationToken = default);
+
+    public Task<T?> DeleteAsync(Func<T, bool> query, CancellationToken cancellationToken = default);
 }

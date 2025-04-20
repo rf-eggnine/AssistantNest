@@ -24,17 +24,13 @@ public class SignIn : PageModel
         _logger = logger;
         _users = users;
     }
-    
-    public async Task<AnUser?> GetUserFromCookieAsync(CancellationToken cancellationToken = default)
-    {
-        return await HttpContext.GetUserFromCookieAsync(_users, _logger, cancellationToken);
-    }
 
+    public AnUser? AnUser { get; set; }
     public IList<IValidation> Validations {get;set;} = new List<IValidation>();
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        await _users.SignInUserAsync(HttpContext, false, cancellationToken);
+        AnUser = await _users.SignInUserAsync(HttpContext, false, cancellationToken);
         return Page();
     }
     
@@ -54,7 +50,8 @@ public class SignIn : PageModel
             Validations.Add(new UserNotFoundValidation());
             return Page();
         }
-        await _users.SignInUserAsync(HttpContext, anUser.Id, cancellationToken);
+        HttpContext.SetUserIdCookie(anUser.Id);
+        AnUser = await _users.SignInUserAsync(HttpContext, true, cancellationToken);
         return RedirectToPage("home");
     }
 }

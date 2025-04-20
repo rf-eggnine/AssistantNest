@@ -26,16 +26,12 @@ public class SignUp : PageModel
         _users = users;
     }
 
+    public AnUser? AnUser {get;set;}
     public IList<IValidation> Validations {get;set;} = new List<IValidation>();
     
-    public async Task<AnUser?> GetUserFromCookieAsync(CancellationToken cancellationToken = default)
-    {
-        return await HttpContext.GetUserFromCookieAsync(_users, _logger, cancellationToken);
-    }
-
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        await _users.SignInUserAsync(HttpContext, false, cancellationToken);
+        AnUser = await _users.SignInUserAsync(HttpContext, false, cancellationToken);
         return Page();
     }
 
@@ -45,17 +41,18 @@ public class SignUp : PageModel
         ArgumentException.ThrowIfNullOrWhiteSpace(passphrase);
         Validations.Clear();
         string encrypted = await passphrase.EncryptAsync(cancellationToken);
-        AnUser? anUser = await HttpContext.GetUserFromCookieAsync(_users, _logger, cancellationToken);
-        if(anUser is null)
+        Guid? userId = await HttpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
+        AnUser = userId is null ? null : await _users.GetAsync(u => u.Id.Equals(userId), cancellationToken);
+        if(AnUser is null)
         {
-            _logger.LogInformation("No User currently connected, logging in new User");
+            _logger.LogInformation("No User currently connected");
             return Page();
         }
-        if(!await _users.UpdateAsync(p => p.Id.Equals(anUser.Id), p =>
+        if(await _users.UpdateAsync(u => u.Id.Equals(AnUser.Id), u =>
             {
-                p.Name = name;
-                p.EncryptedPassphrase = encrypted;
-            }))
+                u.Name = name;
+                u.EncryptedPassphrase = encrypted;
+            }, cancellationToken) is null)
         {
             _logger.LogInformation("Update User failed");
             Validations.Add(new UserAlreadyExistsValidation());

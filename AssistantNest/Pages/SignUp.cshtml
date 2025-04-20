@@ -4,9 +4,8 @@
 
 @{
     ViewData["Title"] = "Sentient Horizon Sign Up";
-    ViewData["User"] = await Model.GetUserFromCookieAsync();
+    ViewData["User"] = Model.AnUser;
 }
-
 <div id="content">
     <h1>Sign up</h1>
     <form method="post">

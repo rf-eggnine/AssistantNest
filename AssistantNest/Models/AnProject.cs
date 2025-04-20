@@ -6,23 +6,17 @@ using System;
 
 namespace AssistantNest.Models;
 
-internal class AnProject
+public class AnProject
 {
-    public Guid Id { get; set; }
+    public Guid Id { get; set; } = Guid.Empty;
     public string Name { get; set; } = string.Empty;
-    public string NickName { get; set; } = string.Empty;
-    public string OpenAiId { get; set; } = string.Empty;
+    public string OpenAiOrganizationId { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public string EncryptedApiKey { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? DeletedAt { get; set; } = null;
+    public bool IsDeleted => DeletedAt.HasValue;
     public Guid UserId { get; set; }
-    
-    public AnProject(Guid id, string name, string nickName, DateTime createdAt, DateTime updatedAt, Guid userId)
-    {
-        Id = id;
-        Name = name;
-        CreatedAt = createdAt;
-        UpdatedAt = updatedAt;
-        UserId = userId;
-    }
+    public AnUser? User { get; set; } = null!;
 }

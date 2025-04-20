@@ -18,8 +18,7 @@ internal class AnProjectsSchemaFilter : ISchemaUpdatingFilter
     {
         schema.Type = ObjectType;
         schema.Properties.Add(nameof(AnProject.Id), new OpenApiSchema() { Type = StringType, Format = UuidFormat });
-        schema.Properties.Add(nameof(AnProject.Name), new OpenApiSchema() { Type = StringType, Format = UuidFormat });
-        schema.Properties.Add(nameof(AnProject.NickName), new OpenApiSchema() { Type = StringType, Format = UuidFormat });
-        schema.Properties.Add(nameof(AnProject.OpenAiId), new OpenApiSchema() { Type = BooleanType });
+        schema.Properties.Add(nameof(AnProject.Name), new OpenApiSchema() { Type = StringType });
+        schema.Properties.Add(nameof(AnProject.OpenAiOrganizationId), new OpenApiSchema() { Type = StringType });
     }
 }

@@ -4,7 +4,7 @@
 
 @{
     ViewData["Title"] = "Assistant Nest Sign In";
-    ViewData["User"] = await Model.GetUserFromCookieAsync();
+    ViewData["User"] = Model.AnUser;
 }
 <div id="content">
     <h1>Sign in</h1>

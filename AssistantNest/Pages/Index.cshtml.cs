@@ -10,6 +10,7 @@ using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
 using AssistantNest;
+using System;
 
 namespace Eggnine.SentientHorizon.Web.Pages;
 public class Index : PageModel
@@ -25,15 +26,11 @@ public class Index : PageModel
 
     public AnUser? AnUser {get;set;}
 
-    public async Task<AnUser?> GetUserFromCookieAsync(CancellationToken cancellationToken = default)
-    {
-        return await HttpContext.GetUserFromCookieAsync(_users, _logger, cancellationToken);
-    }
-
     public async Task<IActionResult> OnGetAsync(bool acceptedCookies = false, CancellationToken cancellationToken = default)
     {
-        AnUser = await GetUserFromCookieAsync(cancellationToken);
         _logger.LogDebug("Path {Path}", HttpContext.Request.Path);
+        Guid? userId = await HttpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
+        AnUser = userId is null ? null : await _users.GetAsync(u => u.Id.Equals(userId), cancellationToken);
         if(AnUser is not null && AnUser.HasAcceptedCookies && acceptedCookies)
         {
             return RedirectPreserveMethod($"Home?{Constants.QueryStringKeyAcceptedCookies}=true");
