@@ -12,10 +12,34 @@ A web-based UI for interacting with OpenAI Assistants.
 
 This is an early-stage project and may include placeholder pages, minimal UI, or incomplete functionality as the core framework is being developed.
 
-Stay tuned for:
-- Project management dashboard
-- Assistant list and metadata display
-- Secure OpenAI API key storage (PostgreSQL + EF Core)
+## ✅ AssistantNest MVP1 Checklist
+
+### 📄 Project & Licensing
+
+- [x] Repository created with clear branding and purpose  
+- [x] EG9-PD LICENSE file added to the root of the repo  
+- [x] License headers added to all `.cs` files  
+- [x] Dependency on Eggnine.Common added (also EG9-PD licensed)
+
+### 🧑‍💻 User Authentication
+
+- [x] Basic authentication system (login/logout/session)  
+- [ ] PostgreSQL table for Users
+
+### 📁 Project Management
+
+- [ ] PostgreSQL table for Projects  
+- [ ] Each user can own multiple projects
+
+### 🔌 OpenAI Assistants API Integration
+
+- [ ] List Projects  
+- [ ] Create Project  
+- [ ] Edit Project  
+- [ ] Delete Project  
+- [ ] View Project  
+- [ ] List Assistants within a project
+
 
 ---
 

@@ -1,0 +1,42 @@
+// ©️ 2025 RF@Eggnine.com
+// Licensed under the EG9-PD License which includes a personal IP disclaimer.
+// See LICENSE file in the project root for full license information.
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using AssistantNest;
+using AssistantNest.Extensions;
+using AssistantNest.Models;
+using AssistantNest.Repositories;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
+
+namespace Eggnine.SentientHorizon.Web.Pages;
+public class Home : PageModel
+{
+    private readonly ILogger _logger;
+    private readonly IUserRepository _users;
+
+    public Home(ILogger<Index> logger, IUserRepository users)
+    {
+        _logger = logger;
+        _users = users;
+    }
+
+    public AnUser? AnUser {get;set;}
+
+    public async Task<IActionResult> OnGetAsync(bool acceptedCookies = false, CancellationToken cancellationToken = default)
+    {
+        _logger.LogTrace("Entering {MethodName}", nameof(OnGetAsync));
+        AnUser = await _users.SignInUserAsync(HttpContext, acceptedCookies, cancellationToken);
+        if(acceptedCookies)
+        {
+            HttpContext.Response.Headers.Append(Constants.HeaderAcceptedCookies, "true");
+            return RedirectToPage("Home");
+        };
+        return Page();
+    }
+}

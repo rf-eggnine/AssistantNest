@@ -1,0 +1,7 @@
+@page
+@model Pages.Privacy
+@{
+    ViewData["Title"] = "Privacy";
+    ViewData["User"] = Model.AnUser;
+}
+@await Html.PartialAsync("_Privacy", null)
