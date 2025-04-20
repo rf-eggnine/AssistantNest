@@ -13,15 +13,17 @@ using AssistantNest.Validations;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
+using AssistantNest.Services;
 
 namespace AssistantNest.Pages;
 public class SignUp : PageModel
 {
     private readonly ILogger _logger;
-    private readonly IUserRepository _users;
-
-    public SignUp(ILogger<SignUp> logger, IUserRepository users)
+    private readonly IRepository<AnUser> _users;
+    private readonly IAuthService _authService;
+    public SignUp(ILogger<SignUp> logger, IRepository<AnUser> users, IAuthService authService)
     {
+        _authService = authService;
         _logger = logger;
         _users = users;
     }
@@ -31,7 +33,7 @@ public class SignUp : PageModel
     
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        AnUser = await _users.SignInUserAsync(HttpContext, false, cancellationToken);
+        AnUser = await _authService.SignInUserAsync(HttpContext, false, cancellationToken);
         return Page();
     }
 

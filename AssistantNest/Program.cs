@@ -64,7 +64,7 @@ internal static class Program
                     .UseModel(AnDbContext.GetModelBuilder().FinalizeModel());
             })
             .AddScoped<AnDbContext>()
-            .AddAnRepositories()
+            .AddRepositories()
             .AddRazorPages();
         builder.Services
             .AddLogging(loggingBuilder => loggingBuilder.AddFile("an.log", append: true));

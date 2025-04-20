@@ -11,15 +11,17 @@ using AssistantNest.Models;
 using AssistantNest.Extensions;
 using AssistantNest;
 using System;
+using AssistantNest.Services;
 
-namespace Eggnine.SentientHorizon.Web.Pages;
+namespace AssistantNest.Pages;
 public class Index : PageModel
 {
     private readonly ILogger _logger;
-    private readonly IUserRepository _users;
-
-    public Index(ILogger<Index> logger, IUserRepository users)
+    private readonly IRepository<AnUser> _users;
+    private readonly IAuthService _authService;
+    public Index(ILogger<Index> logger, IRepository<AnUser> users, IAuthService authService)
     {
+        _authService = authService;
         _logger = logger;
         _users = users;
     }

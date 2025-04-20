@@ -10,19 +10,20 @@ using Microsoft.Extensions.Logging;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
+using AssistantNest.Services;
 
 namespace AssistantNest.Pages;
 public class Privacy : PageModel
 {
     private readonly ILogger _logger;
-    private readonly IUserRepository _users;
-
-    public Privacy(ILogger<Privacy> logger, IUserRepository users)
+    private readonly IRepository<AnUser> _users;
+    private readonly IAuthService _authService;
+    public Privacy(ILogger<Privacy> logger, IRepository<AnUser> users, IAuthService authService)
     {
+        _authService = authService;
         _logger = logger;
         _users = users;
     }
-
     public AnUser? AnUser {get;set;}
 
     public async Task<IActionResult> OnGetAsync(bool acceptedCookies = false, CancellationToken cancellationToken = default)

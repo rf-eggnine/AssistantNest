@@ -1,8 +1,6 @@
 // ©️ 2025 RF@Eggnine.com
 // Licensed under the EG9-PD License which includes a personal IP disclaimer.
 // See LICENSE file in the project root for full license information.
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Authentication;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,12 +8,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using AssistantNest.Models;
-using AssistantNest.Extensions;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace AssistantNest.Repositories;
 
-internal class UserRepository : IUserRepository
+internal class UserRepository : IRepository<AnUser>
 {
     private readonly AnDbContext _anDbContext;
     private readonly ILogger _logger;
@@ -26,123 +24,6 @@ internal class UserRepository : IUserRepository
         _logger = logger;
     }
     
-    public async Task<AnUser?> SignInUserAsync(HttpContext httpContext, bool acceptedCookies = false, 
-        CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            Guid? userId = await httpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
-            if (userId is null)
-            {
-                _logger.LogInformation("UserId not found in cookies");
-                userId = Guid.NewGuid();
-                httpContext.SetUserIdCookie(userId.Value);
-                _logger.LogInformation("set cookie with value {Id}", userId.Value);
-                return await CreateNewUserAsync(userId.Value, httpContext, acceptedCookies, cancellationToken);
-            }
-            AnUser? anUser = await GetAsync(u => u.Id.Equals(userId), cancellationToken);
-            if (anUser is null)
-            {
-                _logger.LogWarning("User not found with id {Id}", userId);
-                return await CreateNewUserAsync(userId.Value, httpContext, acceptedCookies, cancellationToken);
-            }
-            if (anUser.HasAcceptedCookies.Equals(acceptedCookies))
-            {
-                return anUser;
-            }
-            if(acceptedCookies)
-            {
-                return await UpdateUserAcceptsCookiesAsync(anUser, httpContext, cancellationToken);
-            }
-            return await UpdateUserRejectsCookiesAsync(anUser, httpContext, cancellationToken);
-        }
-        finally
-        {
-            _logger.LogTrace("Exiting {MethodName}", nameof(SignInUserAsync));
-        }
-    }
-
-    private async Task<AnUser?> CreateNewUserAsync(Guid newUserId, HttpContext httpContext, bool acceptedCookies, 
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating new user with id {Id}", newUserId);
-        DateTime now = DateTime.UtcNow;
-        AnUser? anUser = await AddAsync(new AnUser(newUserId)
-            {
-                EncounteredAt = now,
-                UpdatedAt = now,
-                AcceptedCookiesAt = acceptedCookies ? now : null
-            }, cancellationToken);
-        if (anUser is null)
-        {
-            _logger.LogWarning("User not added or signed in with id {Id}", newUserId);
-            return null;
-        }
-        _logger.LogInformation("User added with id {Id}", anUser.Id);
-        return (await httpContext.ReauthenticateAsync(anUser, acceptedCookies, _logger)) ? anUser : null;
-    }
-
-    private async Task<AnUser?> UpdateUserRejectsCookiesAsync(AnUser anUser, HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        await httpContext.ReauthenticateAsync(anUser, false, _logger);
-        Guid userId = anUser.Id;
-        if (await UpdateAsync(u => u.Id.Equals(userId), u => 
-            {
-                u.AcceptedCookiesAt = null;
-                u.UpdatedAt = DateTime.UtcNow;
-            }, cancellationToken) is null)
-        {
-            Exception exception = new Exception("Could not update user");
-            _logger.LogError(exception, "Could not update user with id {Id}", userId);
-        }
-        return null;
-    }
-
-    private async Task<AnUser?> UpdateUserAcceptsCookiesAsync(AnUser anUser, HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        DateTime acceptedCookiesAtAndUpdatedAt = DateTime.UtcNow;
-        _logger.LogInformation("User accepted cookies");
-        Guid userId = anUser.Id;
-        if (await UpdateAsync(u => u.Id.Equals(userId), u => 
-            {
-                u.AcceptedCookiesAt = acceptedCookiesAtAndUpdatedAt;
-                u.UpdatedAt = acceptedCookiesAtAndUpdatedAt;
-            }, cancellationToken) is null)
-        {
-            Exception exception = new Exception("Could not update user");
-            _logger.LogError(exception, "Could not update user with id {Id}", userId);
-            return null;
-        }
-        AnUser? toReturn = await GetAsync(u => u.Id.Equals(userId), cancellationToken);
-        if (toReturn is null)
-        {
-            _logger.LogError("User not found with id {Id}", userId);
-            return null;
-        }
-        else if (httpContext.User is AnUser currentAnUser)
-        {
-            if (currentAnUser.Id.Equals(toReturn.Id))
-            {
-                return toReturn;
-            }
-            await httpContext.SignOutAsync();
-            _logger.LogInformation("User signed out");
-        }
-        else if (httpContext.User is not null)
-        {
-            await httpContext.SignOutAsync();
-        }
-        await httpContext.AuthenticateAsync();
-        _logger.LogInformation("User authenticated");
-        await httpContext.SignInAsync(toReturn);
-        _logger.LogInformation("User signed in");
-        httpContext.SetUserIdCookie(toReturn.Id);
-        _logger.LogInformation("set cookie with value {Id}", toReturn.Id);
-        return toReturn;
-    }
-
     public async Task<AnUser?> AddAsync(AnUser anUser, CancellationToken cancellationToken = default)
     {
         if (await GetAsync(u => u.Id.Equals(anUser.Id), cancellationToken) is not null)
@@ -155,16 +36,16 @@ internal class UserRepository : IUserRepository
         return anUser;
     }
 
-    public async Task<AnUser?> GetAsync(Func<AnUser, bool> query, CancellationToken cancellationToken = default)
+    public async Task<AnUser?> GetAsync(Expression<Func<AnUser, bool>> query, CancellationToken cancellationToken = default)
     {
-        return await _anDbContext.Users.SingleOrDefaultAsync(u => query(u), cancellationToken);
+        return await _anDbContext.Users.SingleOrDefaultAsync(query, cancellationToken);
     }
 
-    public async Task<IEnumerable<AnUser>> GetManyAsync(Func<AnUser, bool> query, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<AnUser>> GetManyAsync(Expression<Func<AnUser, bool>> query, CancellationToken cancellationToken = default)
     {
-        return await _anDbContext.Users.Where(u => query(u)).ToListAsync(cancellationToken);
+        return await _anDbContext.Users.Where(query).ToListAsync(cancellationToken);
     }
-    public async Task<AnUser?> UpdateAsync(Func<AnUser, bool> query, Action<AnUser> update, CancellationToken cancellationToken = default)
+    public async Task<AnUser?> UpdateAsync(Expression<Func<AnUser, bool>> query, Action<AnUser> update, CancellationToken cancellationToken = default)
     {
         AnUser? anUser = await GetAsync(query, cancellationToken);
         if (anUser is null)
@@ -180,7 +61,7 @@ internal class UserRepository : IUserRepository
         await _anDbContext.SaveChangesAsync(cancellationToken);
         return anUser;
     }
-    public async Task<AnUser?> DeleteAsync(Func<AnUser, bool> query, CancellationToken cancellationToken = default)
+    public async Task<AnUser?> DeleteAsync(Expression<Func<AnUser, bool>> query, CancellationToken cancellationToken = default)
     {
         AnUser? anUser = await GetAsync(query, cancellationToken);
         if (anUser is null)
@@ -190,5 +71,13 @@ internal class UserRepository : IUserRepository
         _anDbContext.Users.Remove(anUser);
         await _anDbContext.SaveChangesAsync(cancellationToken);
         return anUser;
+    }
+
+
+    internal static void UpdateUserCookieAccptance(AnUser anUser, bool acceptedCookies)
+    {
+        DateTime now = DateTime.UtcNow;
+        anUser.AcceptedCookiesAt = acceptedCookies ? now : null;
+        anUser.UpdatedAt = now;
     }
 }

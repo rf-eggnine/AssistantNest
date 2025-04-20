@@ -13,17 +13,19 @@ using AssistantNest.Validations;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
+using AssistantNest.Services;
 
 namespace AssistantNest.Pages;
 public class SignOut : PageModel
 {
     private readonly ILogger _logger;
-    private readonly IUserRepository _users;
-
-    public SignOut(ILogger<SignOut> logger, IUserRepository users)
+    private readonly IRepository<AnUser> _users;
+    private readonly IAuthService _authService;
+    public SignOut(ILogger<SignOut> logger, IRepository<AnUser> users, IAuthService authService)
     {
+        _authService = authService;
         _logger = logger;
-        _users =  users;
+        _users = users;
     }
 
     public IList<IValidation> Validations {get;set;} = new List<IValidation>();

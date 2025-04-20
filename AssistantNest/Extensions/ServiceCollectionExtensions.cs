@@ -2,6 +2,7 @@
 // Licensed under the EG9-PD License which includes a personal IP disclaimer.
 // See LICENSE file in the project root for full license information.
 
+using AssistantNest.Models;
 using AssistantNest.Repositories;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -23,9 +24,9 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAnRepositories(this IServiceCollection services)
+    public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IRepository<AnUser>, UserRepository>();
         return services;
     }
 }

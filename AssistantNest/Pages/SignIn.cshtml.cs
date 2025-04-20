@@ -12,15 +12,17 @@ using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
 using AssistantNest.Validations;
+using AssistantNest.Services;
 
 namespace AssistantNest.Pages;
 public class SignIn : PageModel
 {
     private readonly ILogger _logger;
-    private readonly IUserRepository _users;
-
-    public SignIn(ILogger<SignIn> logger, IUserRepository users)
+    private readonly IRepository<AnUser> _users;
+    private readonly IAuthService _authService;
+    public SignIn(ILogger<SignIn> logger, IRepository<AnUser> users, IAuthService authService)
     {
+        _authService = authService;
         _logger = logger;
         _users = users;
     }
@@ -30,7 +32,7 @@ public class SignIn : PageModel
 
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
-        AnUser = await _users.SignInUserAsync(HttpContext, false, cancellationToken);
+        AnUser = await _authService.SignInUserAsync(HttpContext, false, cancellationToken);
         return Page();
     }
     
@@ -51,7 +53,7 @@ public class SignIn : PageModel
             return Page();
         }
         HttpContext.SetUserIdCookie(anUser.Id);
-        AnUser = await _users.SignInUserAsync(HttpContext, true, cancellationToken);
+        AnUser = await _authService.SignInUserAsync(HttpContext, true, cancellationToken);
         return RedirectToPage("home");
     }
 }

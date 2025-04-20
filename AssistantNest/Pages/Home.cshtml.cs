@@ -8,20 +8,23 @@ using System.Threading.Tasks;
 using AssistantNest;
 using AssistantNest.Extensions;
 using AssistantNest.Models;
+using AssistantNest.Pages;
 using AssistantNest.Repositories;
+using AssistantNest.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 
-namespace Eggnine.SentientHorizon.Web.Pages;
+namespace AssistantNest.Pages;
 public class Home : PageModel
 {
     private readonly ILogger _logger;
-    private readonly IUserRepository _users;
-
-    public Home(ILogger<Index> logger, IUserRepository users)
+    private readonly IRepository<AnUser> _users;
+    private readonly IAuthService _authService;
+    public Home(ILogger<Home> logger, IRepository<AnUser> users, IAuthService authService)
     {
+        _authService = authService;
         _logger = logger;
         _users = users;
     }
@@ -31,7 +34,7 @@ public class Home : PageModel
     public async Task<IActionResult> OnGetAsync(bool acceptedCookies = false, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Entering {MethodName}", nameof(OnGetAsync));
-        AnUser = await _users.SignInUserAsync(HttpContext, acceptedCookies, cancellationToken);
+        AnUser = await _authService.SignInUserAsync(HttpContext, acceptedCookies, cancellationToken);
         if(acceptedCookies)
         {
             HttpContext.Response.Headers.Append(Constants.HeaderAcceptedCookies, "true");
