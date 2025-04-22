@@ -4,14 +4,27 @@
 using System;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace AssistantNest.Extensions;
 
 public static class ClaimsPrincipalExtensions
 {
-    public static Guid GetId(this ClaimsPrincipal claimsPrincipal)
+    public static async Task<Guid?> GetIdAsync(this ClaimsPrincipal claimsPrincipal,
+        CancellationToken cancellationToken = default)
     {
-        string? id = claimsPrincipal.Claims.FirstOrDefault(c => c.Type.Equals(Constants.IdClaim))?.Value;
-        return id == null ? Guid.Empty : new Guid(id);
+        string? id = (await claimsPrincipal.Claims.AsQueryable()
+            .SingleOrDefaultAsync(c => c.Type.Equals(Constants.IdClaim), cancellationToken))?.Value;
+        if (string.IsNullOrEmpty(id))
+        {
+            return Guid.Empty;
+        }
+        if (Guid.TryParse(id, out Guid parsedId))
+        {
+            return parsedId;
+        }
+        return null;
     }
 }

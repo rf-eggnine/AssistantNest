@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
 using AssistantNest.Extensions;
-using AssistantNest;
 using System;
 using AssistantNest.Services;
 

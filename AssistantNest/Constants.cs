@@ -12,4 +12,6 @@ public static class Constants
     public const string QueryStringKeyAcceptedCookies = "acceptedCookies";
     public const string HeaderAcceptedCookies = "acceptedCookies";
     public const string IdClaim = "id";
+    public const string NameClaim = "name";
+    public const string AuthScheme = "AssistantNestCookieAuthScheme";
 }

@@ -1,12 +1,13 @@
-
+// ©️ 2025 RF@Eggnine.com
+// Licensed under the EG9-PD License which includes a personal IP disclaimer.
+// See LICENSE file in the project root for full license information.
 using System;
-using System.Linq.Expressions;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using AssistantNest.Extensions;
 using AssistantNest.Models;
 using AssistantNest.Repositories;
+using Eggnine.Common;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -24,111 +25,193 @@ public class AuthService : IAuthService
         _logger = logger;
     }
 
-    public async Task<AnUser?> SignInUserAsync(HttpContext httpContext, bool acceptedCookies = false, 
-        CancellationToken cancellationToken = default)
+    public async Task<AnUser?> SignInUserAsync(HttpContext httpContext, bool acceptedCookies = false, CancellationToken cancellationToken = default)
     {
-        try
+        AnUser? user = await httpContext.GetUserFromCookieAsync(_userRepository, _logger, cancellationToken);
+        if (user is not null)
         {
-            Guid? userId = await httpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
-            if (userId is null)
-            {
-                _logger.LogInformation("UserId not found in cookies");
-                userId = Guid.NewGuid();
-                httpContext.SetUserIdCookie(userId.Value);
-                _logger.LogInformation("set cookie with value {Id}", userId.Value);
-                return await CreateNewUserAsync(userId.Value, httpContext, acceptedCookies, cancellationToken);
-            }
-            AnUser? anUser = await _userRepository.GetAsync(u => u.Id.Equals(userId), cancellationToken);
-            if (anUser is null)
-            {
-                _logger.LogWarning("User not found with id {Id}", userId);
-                return await CreateNewUserAsync(userId.Value, httpContext, acceptedCookies, cancellationToken);
-            }
-            if (anUser.HasAcceptedCookies.Equals(acceptedCookies))
-            {
-                return anUser;
-            }
-            if(acceptedCookies)
-            {
-                return await UpdateUserAcceptsCookiesAsync(anUser, httpContext, cancellationToken);
-            }
-            return await UpdateUserRejectsCookiesAsync(anUser, httpContext, cancellationToken);
+            return await HandleExistingUserAsync(httpContext, user, acceptedCookies, cancellationToken);
         }
-        finally
-        {
-            _logger.LogTrace("Exiting {MethodName}", nameof(SignInUserAsync));
-        }
-    }
 
-    private async Task<AnUser?> CreateNewUserAsync(Guid newUserId, HttpContext httpContext, bool acceptedCookies, 
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Creating new user with id {Id}", newUserId);
-        DateTime now = DateTime.UtcNow;
-        AnUser? anUser = await _userRepository.AddAsync(new AnUser(newUserId)
-            {
-                EncounteredAt = now,
-                UpdatedAt = now,
-                AcceptedCookiesAt = acceptedCookies ? now : null
-            }, cancellationToken);
-        if (anUser is null)
+        Guid? cookieUserId = await httpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
+        if (cookieUserId is not null)
         {
-            _logger.LogWarning("User not added or signed in with id {Id}", newUserId);
+            return await TryCreateUserFromCookieAsync(httpContext, cookieUserId.Value, acceptedCookies, cancellationToken);
+        }
+
+        // No cookie at all
+        _logger.LogInformation("UserId not found in cookies");
+        if (!acceptedCookies)
+        {
+            _logger.LogInformation("User rejected cookies. Skipping user creation.");
             return null;
         }
-        _logger.LogInformation("User added with id {Id}", anUser.Id);
-        return (await httpContext.ReauthenticateAsync(anUser, acceptedCookies, _logger)) ? anUser : null;
+
+        Guid newUserId = Guid.NewGuid();
+        _logger.LogInformation("Generated new userId {Id}", newUserId);
+        AnUser? newUser = await CreateNewUserAsync(newUserId, acceptedCookies, cancellationToken);
+        if (newUser is null)
+        {
+            return null;
+        }
+
+        await httpContext.SignInAsync(newUser);
+        _logger.LogInformation("User signed in with id {Id}", newUserId);
+        return newUser;
     }
 
-    private async Task<AnUser?> UpdateUserRejectsCookiesAsync(AnUser anUser, HttpContext httpContext,
-        CancellationToken cancellationToken)
+    public async Task<AnUser?> RegisterUserAsync(HttpContext httpContext, string name, string password, CancellationToken cancellationToken = default)
     {
-        await httpContext.ReauthenticateAsync(anUser, false, _logger);
-        Guid userId = anUser.Id;
-        if (await _userRepository.UpdateAsync(u => u.Id.Equals(userId),
-                u => UserRepository.UpdateUserCookieAccptance(u, false), cancellationToken) is null)
+        // Check if name already exists
+        var existingUser = await _userRepository.GetAsync(u => name.Equals(u.Name), cancellationToken);
+        if (existingUser != null)
         {
-            Exception exception = new Exception("Could not update user");
-            _logger.LogError(exception, "Could not update user with id {Id}", userId);
+            _logger.LogWarning("Username '{Name}' is already taken", name);
+            return null;
         }
+
+        // Create update user with encrypted password
+        AnUser? userToUpdate = await httpContext.GetUserFromCookieAsync(_userRepository, _logger, cancellationToken);
+        if (userToUpdate is null)
+        {
+            _logger.LogWarning("UserId not found in cookies");
+            return null;
+        }
+        if (userToUpdate.Name != null)
+        {
+            _logger.LogWarning("User already has a name");
+            return null;
+        }
+        DateTime now = DateTime.UtcNow;
+
+        string encryptedPassword = await password.EncryptAsync(cancellationToken);
+        AnUser? updatedUser = await _userRepository.UpdateAsync(u => u.Id == userToUpdate.Id, u =>
+        {
+            u.Name = name;
+            u.EncryptedPassphrase = encryptedPassword;
+            u.UpdatedAt = now;
+        }, cancellationToken);
+        
+        if (updatedUser == null)
+        {
+            _logger.LogWarning("Failed to register user '{Name}'", name);
+            return null;
+        }
+
+        _logger.LogInformation("User registered with id {Id}", updatedUser.Id);
+        await httpContext.SignInAsync(updatedUser);
+        _logger.LogInformation("User signed in with id {Id}", updatedUser.Id);
+        return updatedUser;
+    }
+
+    public async Task<AnUser?> AuthenticateWithCredentialsAsync(HttpContext httpContext, string name, string password, CancellationToken cancellationToken = default)
+    {
+        AnUser? user = await _userRepository.GetAsync(u => name.Equals(u.Name), cancellationToken);
+        if (user == null)
+        {
+            _logger.LogWarning("Login failed: user '{Name}' not found", name);
+            return null;
+        }
+
+        if (!await password.VerifyEncryptionAsync(user.EncryptedPassphrase ?? string.Empty, cancellationToken))
+        {
+            _logger.LogWarning("Login failed: invalid password for user '{Name}'", name);
+            return null;
+        }
+
+        _logger.LogInformation("User '{Name}' authenticated", name);
+        await httpContext.SignInAsync(user);
+        return user;
+    }
+
+
+    private async Task<AnUser?> HandleExistingUserAsync(HttpContext httpContext, AnUser user, bool acceptedCookies, CancellationToken cancellationToken)
+    {
+        Guid userId = user.Id;
+        _logger.LogInformation("User already signed in with id {Id}", userId);
+
+        if (!acceptedCookies)
+        {
+            _logger.LogInformation("Signed in user has now rejected cookies");
+            await _userRepository.UpdateAsync(u => u.Id == userId, u => UpdateUserCookieAcceptance(u, false), cancellationToken);
+            await httpContext.SignOutAsync(Constants.AuthScheme);
+            _logger.LogInformation("User with id {Id} signed out", userId);
+            return null;
+        }
+
+        if (!user.HasAcceptedCookies)
+        {
+            _logger.LogInformation("User with id {Id} now accepts cookies", userId);
+            await _userRepository.UpdateAsync(u => u.Id == userId, u => UpdateUserCookieAcceptance(u, true), cancellationToken);
+        }
+
+        var result = await httpContext.AuthenticateAsync(Constants.AuthScheme);
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("User with id {Id} already authenticated", userId);
+            return user;
+        }
+
+        _logger.LogInformation("User with id {Id} failed reauthentication, signing out", userId);
+        await httpContext.SignOutAsync(Constants.AuthScheme);
         return null;
     }
 
-    private async Task<AnUser?> UpdateUserAcceptsCookiesAsync(AnUser anUser, HttpContext httpContext,
-        CancellationToken cancellationToken)
+    private async Task<AnUser?> TryCreateUserFromCookieAsync(HttpContext httpContext, Guid userId, bool acceptedCookies, CancellationToken cancellationToken)
     {
-        DateTime acceptedCookiesAtAndUpdatedAt = DateTime.UtcNow;
-        _logger.LogInformation("User accepted cookies");
-        Guid userId = anUser.Id;
-        if (await _userRepository.UpdateAsync(u => u.Id.Equals(userId),
-                u => UserRepository.UpdateUserCookieAccptance(u, true), cancellationToken) is null)
+        _logger.LogInformation("UserId {Id} found in cookie", userId);
+        AnUser? user = await CreateNewUserAsync(userId, acceptedCookies, cancellationToken);
+        if (user is null)
         {
-            Exception exception = new Exception("Could not update user");
-            _logger.LogError(exception, "Could not update user with id {Id}", userId);
+            _logger.LogWarning("User not added with id {Id}", userId);
+            await httpContext.SignOutAsync(Constants.AuthScheme);
             return null;
         }
-        AnUser? toReturn = await _userRepository.GetAsync(u => u.Id.Equals(userId), cancellationToken);
-        if (toReturn is null)
+
+        var result = await httpContext.AuthenticateAsync(Constants.AuthScheme);
+        if (result.Succeeded)
         {
-            _logger.LogError("User not found with id {Id}", userId);
-            return null;
+            _logger.LogInformation("User with id {Id} authenticated", userId);
+            return user;
         }
-        else if (httpContext.User?.GetId().Equals(toReturn.Id) ?? false)
-        {
-            return toReturn;
-        }
-        else if (httpContext.User is not null)
-        {
-            await httpContext.SignOutAsync();
-            _logger.LogInformation("User signed out");
-        }
-        await httpContext.AuthenticateAsync();
-        _logger.LogInformation("User authenticated");
-        await httpContext.SignInAsync(toReturn);
-        _logger.LogInformation("User signed in");
-        httpContext.SetUserIdCookie(toReturn.Id);
-        _logger.LogInformation("set cookie with value {Id}", toReturn.Id);
-        return toReturn;
+
+        _logger.LogInformation("User with id {Id} failed auth, signing out", userId);
+        await httpContext.SignOutAsync(Constants.AuthScheme);
+        return null;
     }
 
+    private async Task<AnUser?> CreateNewUserAsync(Guid newUserId, bool acceptedCookies, CancellationToken cancellationToken)
+    {
+        if (!acceptedCookies)
+        {
+            _logger.LogInformation("User rejected cookies. Not creating user.");
+            return null;
+        }
+
+        _logger.LogInformation("Creating new user with id {Id}", newUserId);
+        DateTime now = DateTime.UtcNow;
+
+        AnUser? user = await _userRepository.AddAsync(new AnUser(newUserId)
+        {
+            EncounteredAt = now,
+            UpdatedAt = now,
+            AcceptedCookiesAt = now
+        }, cancellationToken);
+
+        if (user is null)
+        {
+            _logger.LogWarning("Failed to add user with id {Id}", newUserId);
+            return null;
+        }
+
+        _logger.LogInformation("User added with id {Id}", user.Id);
+        return user;
+    }
+
+    private static void UpdateUserCookieAcceptance(AnUser anUser, bool acceptedCookies)
+    {
+        DateTime now = DateTime.UtcNow;
+        anUser.AcceptedCookiesAt = acceptedCookies ? now : null;
+        anUser.UpdatedAt = now;
+    }
 }

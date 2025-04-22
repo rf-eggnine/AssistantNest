@@ -72,12 +72,4 @@ internal class UserRepository : IRepository<AnUser>
         await _anDbContext.SaveChangesAsync(cancellationToken);
         return anUser;
     }
-
-
-    internal static void UpdateUserCookieAccptance(AnUser anUser, bool acceptedCookies)
-    {
-        DateTime now = DateTime.UtcNow;
-        anUser.AcceptedCookiesAt = acceptedCookies ? now : null;
-        anUser.UpdatedAt = now;
-    }
 }

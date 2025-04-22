@@ -9,8 +9,20 @@
 <div id="content">
     <h1>Sign in</h1>
     <form method="post">
-        <label for="name">Name:</label><input id="name" name="name" type="text" /><br/>
-        <label for="passphrase">Passphrase:</label><input id="passphrase" name="passphrase" type="password" /><br/>
+        <label asp-for="@Model.Name"></label>
+        <input asp-for="@Model.Name" /><br/>
+
+        <label asp-for="@Model.Passphrase"></label>
+        <input asp-for="@Model.Passphrase" type="password" /><br/>
         <input type="submit" value="Sign in" />
     </form>
+    @if (Model.Validations.Any())
+    {
+        <ul class="validations">
+        @foreach (var validation in Model.Validations)
+        {
+            <li>@validation.Message</li>
+        }
+        </ul>
+    }
 </div>

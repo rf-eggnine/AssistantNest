@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Threading;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
-using AssistantNest.Extensions;
 using AssistantNest.Validations;
 using AssistantNest.Services;
 
@@ -30,30 +29,34 @@ public class SignIn : PageModel
     public AnUser? AnUser { get; set; }
     public IList<IValidation> Validations {get;set;} = new List<IValidation>();
 
+    [BindProperty]
+    public string Name { get; set; } = string.Empty;
+    [BindProperty]
+    public string Passphrase { get; set; } = string.Empty;
+
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         AnUser = await _authService.SignInUserAsync(HttpContext, false, cancellationToken);
         return Page();
     }
     
-    public async Task<IActionResult> OnPostAsync(string name, string passphrase, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(passphrase);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Passphrase);
         Validations.Clear();
-        AnUser? anUser = await _users.GetAsync(u => name.Equals(u.Name), cancellationToken);
-        if(anUser is null)
+        AnUser = await _authService.AuthenticateWithCredentialsAsync(
+            HttpContext,
+            Name,
+            Passphrase,
+            cancellationToken
+        );
+        if (AnUser is null)
         {
+            _logger.LogInformation("User not found");
             Validations.Add(new UserNotFoundValidation());
             return Page();
         }
-        if(!await anUser.VerifyEncryptionAsync(passphrase, cancellationToken))
-        {
-            Validations.Add(new UserNotFoundValidation());
-            return Page();
-        }
-        HttpContext.SetUserIdCookie(anUser.Id);
-        AnUser = await _authService.SignInUserAsync(HttpContext, true, cancellationToken);
         return RedirectToPage("home");
     }
 }

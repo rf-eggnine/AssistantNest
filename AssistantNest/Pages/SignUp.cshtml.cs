@@ -1,7 +1,6 @@
 // ©️ 2025 RF@Eggnine.com
 // Licensed under the EG9-PD License which includes a personal IP disclaimer.
 // See LICENSE file in the project root for full license information.
-using Eggnine.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
@@ -12,7 +11,6 @@ using System.Collections.Generic;
 using AssistantNest.Validations;
 using AssistantNest.Repositories;
 using AssistantNest.Models;
-using AssistantNest.Extensions;
 using AssistantNest.Services;
 
 namespace AssistantNest.Pages;
@@ -30,6 +28,11 @@ public class SignUp : PageModel
 
     public AnUser? AnUser {get;set;}
     public IList<IValidation> Validations {get;set;} = new List<IValidation>();
+
+    [BindProperty]
+    public string Name { get; set; } = string.Empty;
+    [BindProperty]
+    public string Passphrase { get; set; } = string.Empty;
     
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
@@ -37,26 +40,20 @@ public class SignUp : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(string name, string passphrase, CancellationToken cancellationToken)
+    public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(passphrase);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(Passphrase);
         Validations.Clear();
-        string encrypted = await passphrase.EncryptAsync(cancellationToken);
-        Guid? userId = await HttpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
-        AnUser = userId is null ? null : await _users.GetAsync(u => u.Id.Equals(userId), cancellationToken);
-        if(AnUser is null)
+        AnUser = await _authService.RegisterUserAsync(
+            HttpContext,
+            Name,
+            Passphrase,
+            cancellationToken
+        );
+        if (AnUser is null)
         {
-            _logger.LogInformation("No User currently connected");
-            return Page();
-        }
-        if(await _users.UpdateAsync(u => u.Id.Equals(AnUser.Id), u =>
-            {
-                u.Name = name;
-                u.EncryptedPassphrase = encrypted;
-            }, cancellationToken) is null)
-        {
-            _logger.LogInformation("Update User failed");
+            _logger.LogInformation("User not found");
             Validations.Add(new UserAlreadyExistsValidation());
             return Page();
         }

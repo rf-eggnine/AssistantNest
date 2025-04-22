@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using AssistantNest.Exceptions;
 using AssistantNest.Extensions;
 using Eggnine.Common;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -19,7 +20,7 @@ public class AnUser : ClaimsPrincipal
             [new Claim(Constants.IdClaim, id.ToString())], CookieAuthenticationDefaults.AuthenticationScheme)))
     { }
 
-    public Guid Id => this.GetId();
+    public Guid Id => this.GetIdAsync().GetAwaiter().GetResult() ?? throw new AnUserMissingIdClaimException();
     public DateTime EncounteredAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? AcceptedCookiesAt {get;set;} = null;
