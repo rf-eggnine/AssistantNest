@@ -1,8 +1,10 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssistantNest", "AssistantNest\AssistantNest.csproj", "{A2F0AF87-AAF0-FA9A-61C9-4204AC83EBF3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssistantNest.Tests", "AssistantNest.Tests\AssistantNest.Tests.csproj", "{7D00D8C0-F67D-45AD-9526-A45A436B8C2E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -14,6 +16,10 @@ Global
 		{A2F0AF87-AAF0-FA9A-61C9-4204AC83EBF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2F0AF87-AAF0-FA9A-61C9-4204AC83EBF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2F0AF87-AAF0-FA9A-61C9-4204AC83EBF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D00D8C0-F67D-45AD-9526-A45A436B8C2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D00D8C0-F67D-45AD-9526-A45A436B8C2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D00D8C0-F67D-45AD-9526-A45A436B8C2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D00D8C0-F67D-45AD-9526-A45A436B8C2E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -33,7 +33,7 @@ public class AuthService : IAuthService
             return await HandleExistingUserAsync(httpContext, user, acceptedCookies, cancellationToken);
         }
 
-        Guid? cookieUserId = await httpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
+        Guid? cookieUserId = httpContext.GetUserIdFromCookie(_logger);
         if (cookieUserId is not null)
         {
             return await TryCreateUserFromCookieAsync(httpContext, cookieUserId.Value, acceptedCookies, cancellationToken);
@@ -62,6 +62,23 @@ public class AuthService : IAuthService
 
     public async Task<AnUser?> RegisterUserAsync(HttpContext httpContext, string name, string password, CancellationToken cancellationToken = default)
     {
+        name = name.Trim();
+        password = password.Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
+        {
+            _logger.LogWarning("Username or password is empty");
+            return null;
+        }
+        if (name.Length < 3 || name.Length > 20)
+        {
+            _logger.LogWarning("Username '{Name}' is not between 3 and 20 characters", name);
+            return null;
+        }
+        if (password.Length < 8 || password.Length > 100)
+        {
+            _logger.LogWarning("Password is not between 8 and 100 characters");
+            return null;
+        }
         // Check if name already exists
         var existingUser = await _userRepository.GetAsync(u => name.Equals(u.Name), cancellationToken);
         if (existingUser != null)
@@ -106,6 +123,14 @@ public class AuthService : IAuthService
 
     public async Task<AnUser?> AuthenticateWithCredentialsAsync(HttpContext httpContext, string name, string password, CancellationToken cancellationToken = default)
     {
+        name = name.Trim();
+        password = password.Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
+        {
+            _logger.LogWarning("Username or password is empty");
+            return null;
+        }
+        
         AnUser? user = await _userRepository.GetAsync(u => name.Equals(u.Name), cancellationToken);
         if (user == null)
         {
@@ -130,6 +155,13 @@ public class AuthService : IAuthService
         Guid userId = user.Id;
         _logger.LogInformation("User already signed in with id {Id}", userId);
 
+        var result = await httpContext.AuthenticateAsync(Constants.AuthScheme);
+        if (!result.Succeeded || !result.Principal.GetId().Equals(userId))
+        {
+            _logger.LogInformation("User with id {Id} failed reauthentication, signing out", userId);
+            await httpContext.SignOutAsync(Constants.AuthScheme);
+            return null;
+        }
         if (!acceptedCookies)
         {
             _logger.LogInformation("Signed in user has now rejected cookies");
@@ -144,17 +176,9 @@ public class AuthService : IAuthService
             _logger.LogInformation("User with id {Id} now accepts cookies", userId);
             await _userRepository.UpdateAsync(u => u.Id == userId, u => UpdateUserCookieAcceptance(u, true), cancellationToken);
         }
-
-        var result = await httpContext.AuthenticateAsync(Constants.AuthScheme);
-        if (result.Succeeded)
-        {
-            _logger.LogInformation("User with id {Id} already authenticated", userId);
-            return user;
-        }
-
-        _logger.LogInformation("User with id {Id} failed reauthentication, signing out", userId);
-        await httpContext.SignOutAsync(Constants.AuthScheme);
-        return null;
+        await httpContext.SignInAsync(user);
+        _logger.LogInformation("User with id {Id} signed in", userId);
+        return user;
     }
 
     private async Task<AnUser?> TryCreateUserFromCookieAsync(HttpContext httpContext, Guid userId, bool acceptedCookies, CancellationToken cancellationToken)
@@ -208,10 +232,10 @@ public class AuthService : IAuthService
         return user;
     }
 
-    private static void UpdateUserCookieAcceptance(AnUser anUser, bool acceptedCookies)
+    internal static void UpdateUserCookieAcceptance(AnUser anUser, bool acceptedCookies)
     {
         DateTime now = DateTime.UtcNow;
-        anUser.AcceptedCookiesAt = acceptedCookies ? now : null;
+        anUser.AcceptedCookiesAt = acceptedCookies ? now : default;
         anUser.UpdatedAt = now;
     }
 }

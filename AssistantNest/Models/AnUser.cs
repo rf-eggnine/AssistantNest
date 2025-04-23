@@ -20,14 +20,14 @@ public class AnUser : ClaimsPrincipal
             [new Claim(Constants.IdClaim, id.ToString())], CookieAuthenticationDefaults.AuthenticationScheme)))
     { }
 
-    public Guid Id => this.GetIdAsync().GetAwaiter().GetResult() ?? throw new AnUserMissingIdClaimException();
+    public Guid Id => this.GetId() ?? throw new AnUserMissingIdClaimException();
     public DateTime EncounteredAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? AcceptedCookiesAt {get;set;} = null;
-    public bool HasAcceptedCookies => AcceptedCookiesAt.HasValue;
-    public DateTime? SignedUpAt { get; set; } = DateTime.UtcNow;
-    public string? Name { get; set; } = null;
-    public string? EncryptedPassphrase { get; set; } = null;
+    public DateTime AcceptedCookiesAt {get;set;} = default;
+    public bool HasAcceptedCookies => AcceptedCookiesAt != default;
+    public DateTime SignedUpAt { get; set; } = default;
+    public string Name { get; set; } = string.Empty;
+    public string EncryptedPassphrase { get; set; } = string.Empty;
     public ICollection<AnProject> Projects { get; set; } = new List<AnProject>();
 
     public async Task<bool> VerifyEncryptionAsync(string passphrase, CancellationToken cancellationToken = default) 

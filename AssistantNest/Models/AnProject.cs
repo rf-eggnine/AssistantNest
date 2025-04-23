@@ -15,8 +15,7 @@ public class AnProject
     public string EncryptedApiKey { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? DeletedAt { get; set; } = null;
-    public bool IsDeleted => DeletedAt.HasValue;
+    public DateTime DeletedAt { get; set; } = default;
+    public bool IsDeleted => DeletedAt != default;
     public Guid UserId { get; set; }
-    public AnUser? User { get; set; } = null!;
 }

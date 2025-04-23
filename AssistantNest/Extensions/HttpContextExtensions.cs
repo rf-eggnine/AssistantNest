@@ -13,8 +13,7 @@ namespace AssistantNest.Extensions;
 
 public static class HttpContextExtensions
 {
-    public static async Task<Guid?> GetUserIdFromCookieAsync(this HttpContext httpContext,
-        ILogger logger, CancellationToken cancellationToken = default)
+    public static Guid? GetUserIdFromCookie(this HttpContext httpContext, ILogger logger)
     {
         if (httpContext is null)
         {
@@ -26,13 +25,13 @@ public static class HttpContextExtensions
             logger.LogError("HttpContext.User is null");
             return null;
         }
-        return await httpContext.User.GetIdAsync(cancellationToken);
+        return httpContext.User.GetId();
     }
 
     public static async Task<AnUser?> GetUserFromCookieAsync(this HttpContext httpContext,
         IRepository<AnUser> users, ILogger logger, CancellationToken cancellationToken = default)
     {
-        Guid? userId = await httpContext.GetUserIdFromCookieAsync(logger, cancellationToken);
+        Guid? userId = httpContext.GetUserIdFromCookie(logger);
         if (userId is null)
         {
             logger.LogError("UserId is null");

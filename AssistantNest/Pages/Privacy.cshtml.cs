@@ -29,8 +29,7 @@ public class Privacy : PageModel
     public async Task<IActionResult> OnGetAsync(bool acceptedCookies = false, CancellationToken cancellationToken = default)
     {
         _logger.LogTrace("Entering {ClassName}.{MethodName}", nameof(Privacy), nameof(OnGetAsync));
-        Guid? userId = await HttpContext.GetUserIdFromCookieAsync(_logger, cancellationToken);
-        AnUser = userId is null ? null : await _users.GetAsync(u => u.Id.Equals(userId), cancellationToken);
+        AnUser = await HttpContext.GetUserFromCookieAsync(_users, _logger, cancellationToken);
         return Page();
     }
 }

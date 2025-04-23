@@ -29,10 +29,11 @@ public class AnDbContext : DbContext
         userBuilder.Property(nameof(AnUser.Name)).HasColumnType("varchar");
         userBuilder.Property(nameof(AnUser.AcceptedCookiesAt)).HasColumnType("timestamp");
         userBuilder.Property(nameof(AnUser.EncounteredAt)).HasColumnType("timestamp");
+        userBuilder.Property(nameof(AnUser.SignedUpAt)).HasColumnType("timestamp");
         userBuilder.Property(nameof(AnUser.UpdatedAt)).HasColumnType("timestamp");
         userBuilder.Property(nameof(AnUser.EncryptedPassphrase)).HasColumnType("varchar");
         userBuilder.HasMany(u => u.Projects)
-            .WithOne(p => p.User)
+            .WithOne()
             .HasForeignKey(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -46,10 +47,8 @@ public class AnDbContext : DbContext
         projectBuilder.Property(nameof(AnProject.EncryptedApiKey)).HasColumnType("varchar");
         projectBuilder.Property(nameof(AnProject.CreatedAt)).HasColumnType("timestamp");
         projectBuilder.Property(nameof(AnProject.UpdatedAt)).HasColumnType("timestamp");
-        projectBuilder.HasOne(p => p.User)
-            .WithMany(u => u.Projects)
-            .HasForeignKey(p => p.User)
-            .OnDelete(DeleteBehavior.Cascade);
+        projectBuilder.Property(nameof(AnProject.DeletedAt)).HasColumnType("timestamp");
+        projectBuilder.Property(nameof(AnProject.IsDeleted)).HasColumnType("boolean");
 
         return modelBuilder;
     }
