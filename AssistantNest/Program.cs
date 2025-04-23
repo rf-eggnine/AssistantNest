@@ -87,7 +87,7 @@ internal static class Program
                 .AddDbContextFactory<AnDbContext>((optionsBuilder) =>
                 {
                     ((DbContextOptionsBuilder<AnDbContext>)optionsBuilder)
-                        .UseNpgsql("Server=localhost;Port=5432;User Id=an;Password=REMOVED;Database=an;")
+                        .UseNpgsql("Server=localhost;Port=5432;User Id=an;Password=;Database=an;")
                         .UseModel(AnDbContext.GetModelBuilder().FinalizeModel());
                 })
                 .AddScoped<AnDbContext>()
