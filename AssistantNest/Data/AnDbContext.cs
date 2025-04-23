@@ -32,6 +32,9 @@ public class AnDbContext : DbContext
         userBuilder.Property(nameof(AnUser.SignedUpAt)).HasColumnType("timestamp");
         userBuilder.Property(nameof(AnUser.UpdatedAt)).HasColumnType("timestamp");
         userBuilder.Property(nameof(AnUser.EncryptedPassphrase)).HasColumnType("varchar");
+        userBuilder.Ignore(nameof(AnUser.Claims));
+        userBuilder.Ignore(nameof(AnUser.Identity));
+        userBuilder.Ignore(nameof(AnUser.Identities));
         userBuilder.HasMany(u => u.Projects)
             .WithOne()
             .HasForeignKey(p => p.UserId)
@@ -48,7 +51,6 @@ public class AnDbContext : DbContext
         projectBuilder.Property(nameof(AnProject.CreatedAt)).HasColumnType("timestamp");
         projectBuilder.Property(nameof(AnProject.UpdatedAt)).HasColumnType("timestamp");
         projectBuilder.Property(nameof(AnProject.DeletedAt)).HasColumnType("timestamp");
-        projectBuilder.Property(nameof(AnProject.IsDeleted)).HasColumnType("boolean");
 
         return modelBuilder;
     }
